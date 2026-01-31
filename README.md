@@ -13,39 +13,37 @@
 
 ### 1. 配置脚本
 
-打开 `ooc-meta-commentary.js`，修改配置区：
+在酒馆助手中找到本脚本，点击"设置"或"变量"按钮，配置以下变量：
 
-```javascript
-const CONFIG = {
-    apiUrl: 'https://api.siliconflow.cn/v1/chat/completions',  // 你的 API 地址
-    apiKey: 'YOUR_API_KEY_HERE',                               // 你的 API Key
-    model: 'deepseek-ai/DeepSeek-V3',                          // 模型名称
-    detailsLabel: '📝 OOC 元评论'                              // 折叠框标签
-};
-```
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `apiUrl` | API 地址 | `https://api.siliconflow.cn/v1/chat/completions` |
+| `apiKey` | API 密钥（必填） | 空 |
+| `model` | 模型名称 | `deepseek-ai/DeepSeek-V3` |
+| `detailsLabel` | 折叠框标签 | `📝 OOC 元评论` |
 
 ### 2. 配置示例
 
 **OpenAI:**
-```javascript
-apiUrl: 'https://api.openai.com/v1/chat/completions'
-model: 'gpt-4o-mini'
+```
+apiUrl: https://api.openai.com/v1/chat/completions
+model: gpt-4o-mini
 ```
 
 **Gemini (OpenAI 兼容):**
-```javascript
-apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
-model: 'gemini-2.0-flash-exp'
+```
+apiUrl: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+model: gemini-2.0-flash-exp
 ```
 
 **SiliconFlow:**
-```javascript
-apiUrl: 'https://api.siliconflow.cn/v1/chat/completions'
-model: 'deepseek-ai/DeepSeek-V3'
+```
+apiUrl: https://api.siliconflow.cn/v1/chat/completions
+model: deepseek-ai/DeepSeek-V3
 ```
 
 **其他兼容 API:**
-修改对应的 `url` 和 `model` 即可
+修改对应的 `apiUrl` 和 `model` 即可
 
 ### 3. 启用脚本
 
@@ -101,10 +99,11 @@ AI 回复完成后，会自动追加元评论折叠框。
 
 ## 注意事项
 
-1. 确保 API Key 正确配置
-2. 确保 API 端点可访问
-3. 元评论生成需要额外时间，请耐心等待
-4. 如果 API 调用失败，查看浏览器控制台错误信息
+1. **首次使用**：需要在酒馆助手的脚本变量设置中配置 `apiKey`
+2. **动态配置**：修改变量后无需刷新，下次调用时自动生效
+3. **网络访问**：确保 API 端点可访问
+4. **响应时间**：元评论生成需要额外时间，请耐心等待
+5. **错误排查**：如果 API 调用失败，查看浏览器控制台错误信息
 
 ## 许可证
 

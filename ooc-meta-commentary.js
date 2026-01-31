@@ -1,15 +1,46 @@
 console.log('=== OOC 脚本开始加载 ===');
 
 // ========== 配置区 ==========
-const CONFIG = {
-    // API 配置（请修改为你的配置）
-    apiUrl: 'https://api.siliconflow.cn/v1/chat/completions',
-    apiKey: 'YOUR_API_KEY_HERE',
-    model: 'deepseek-ai/DeepSeek-V3',
+// 从酒馆助手变量读取配置，如果没有则使用默认值
+function getConfig() {
+    const variables = getVariables({ type: 'script', script_id: getScriptId() }) || {};
 
-    // 折叠框标签
-    detailsLabel: '📝 OOC 元评论'
-};
+    return {
+        apiUrl: variables.apiUrl || 'https://api.siliconflow.cn/v1/chat/completions',
+        apiKey: variables.apiKey || '',
+        model: variables.model || 'deepseek-ai/DeepSeek-V3',
+        detailsLabel: variables.detailsLabel || '📝 OOC 元评论'
+    };
+}
+
+// 获取配置（每次使用时重新读取，支持动态更新）
+function CONFIG() {
+    return getConfig();
+}
+
+// 初始化默认配置
+function initConfig() {
+    const variables = getVariables({ type: 'script', script_id: getScriptId() }) || {};
+    let needsUpdate = false;
+
+    if (!variables.apiUrl) {
+        variables.apiUrl = 'https://api.siliconflow.cn/v1/chat/completions';
+        needsUpdate = true;
+    }
+    if (!variables.model) {
+        variables.model = 'deepseek-ai/DeepSeek-V3';
+        needsUpdate = true;
+    }
+    if (!variables.detailsLabel) {
+        variables.detailsLabel = '📝 OOC 元评论';
+        needsUpdate = true;
+    }
+    // apiKey 不设置默认值，让用户自己配置
+
+    if (needsUpdate) {
+        insertVariables(variables, { type: 'script', script_id: getScriptId() });
+    }
+}
 
 // 提示词模板
 const PROMPT_TEMPLATE = `你是一个元评论助手。请分析以下用户在角色扮演中的OOC（角色外）评论，并结合AI的剧情回复，提供一个简短的建设性反馈。
@@ -42,20 +73,28 @@ function extractOocContent(text) {
 
 // 生成折叠框 HTML
 function generateDetails(content) {
-    return `\n\n<details>\n<summary>${CONFIG.detailsLabel}</summary>\n\n${content}\n\n</details>`;
+    return `\n\n<details>\n<summary>${CONFIG().detailsLabel}</summary>\n\n${content}\n\n</details>`;
 }
 
 // 调用 API
 async function callApi(prompt) {
+    const config = CONFIG();
+
+    if (!config.apiKey) {
+        console.error('[OOC 元评论] API Key 未配置！');
+        toastr.warning('请先在酒馆助手脚本设置中配置 API Key', 'OOC 元评论');
+        return null;
+    }
+
     try {
-        const response = await fetch(CONFIG.apiUrl, {
+        const response = await fetch(config.apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${CONFIG.apiKey}`
+                'Authorization': `Bearer ${config.apiKey}`
             },
             body: JSON.stringify({
-                model: CONFIG.model,
+                model: config.model,
                 messages: [{ role: 'user', content: prompt }],
                 max_tokens: 200
             })
@@ -150,7 +189,12 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (messageId) => {
 
 console.log('[OOC 元评论] 事件监听注册完成');
 
-// ========== 初始化日志 ==========
+// ========== 初始化 ==========
+initConfig();
+const config = CONFIG();
 console.log('[OOC 元评论] 脚本已加载');
-console.log('[OOC 元评论] 当前配置:', CONFIG.model, '@', CONFIG.apiUrl);
-console.log('[OOC 元评论] 请确保已配置正确的 API Key');
+console.log('[OOC 元评论] 当前配置:', config.model, '@', config.apiUrl);
+if (!config.apiKey) {
+    console.warn('[OOC 元评论] ⚠️ 请在酒馆助手脚本设置中配置 API Key');
+    toastr.info('请在脚本设置中配置 API Key 后使用', 'OOC 元评论');
+}
