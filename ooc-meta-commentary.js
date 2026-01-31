@@ -267,8 +267,16 @@ const config = getConfig();
 console.log('[OOC 元评论] 脚本已加载');
 console.log('[OOC 元评论] 当前配置:', config.model, '@', config.apiUrl);
 
-// 注册全局配置函数（方便用户调用）
-window.__ooc_openConfig = openConfigDialog;
+// 注册全局配置函数到顶层窗口（方便用户在控制台调用）
+try {
+    const topWindow = window.parent || window.top || window;
+    topWindow.__ooc_openConfig = openConfigDialog;
+    console.log('[OOC 元评论] 配置函数已注册，在控制台输入 __ooc_openConfig() 即可配置');
+} catch (e) {
+    // 如果无法访问顶层窗口，注册到当前窗口
+    window.__ooc_openConfig = openConfigDialog;
+    console.log('[OOC 元评论] 配置函数已注册（本地窗口）');
+}
 
 if (!config.apiKey) {
     console.warn('[OOC 元评论] ⚠️ API Key 未配置');
