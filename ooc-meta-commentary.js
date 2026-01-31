@@ -154,8 +154,7 @@ async function callApi(prompt) {
 
     if (!config.apiKey) {
         console.error('[OOC 元评论] API Key 未配置！');
-        // 尝试多种方式提示配置
-        toastr.warning('<a href="#" style="color: #fff; text-decoration: underline;" onclick="window.__ooc_openConfig?.(); return false;">点击此处配置 API Key</a>', 'OOC 元评论 - 需要配置', { timeOut: 0, extendedTimeOut: 0, closeButton: true });
+        toastr.warning('请在左侧扩展菜单中点击"OOC配置"来设置 API Key', 'OOC 元评论 - 需要配置');
         return null;
     }
 
@@ -183,6 +182,60 @@ async function callApi(prompt) {
         console.error('[OOC 元评论] API 调用失败:', error);
         toastr.error(error.message || 'API 调用失败，请检查配置', 'OOC 元评论');
         return null;
+    }
+}
+
+// ========== 添加扩展菜单项 ==========
+function addMenuItem() {
+    try {
+        // 等待 DOM 加载完成
+        const checkMenu = setInterval(() => {
+            // 查找扩展菜单容器（尝试多种可能的 ID）
+            const extensionsMenu = document.getElementById('extensionsMenu') ||
+                                  document.querySelector('#extensions_menu_panel') ||
+                                  document.querySelector('.extensions-menu');
+
+            if (extensionsMenu) {
+                clearInterval(checkMenu);
+
+                // 检查是否已经添加过
+                if (document.getElementById('ooc-config-menu-item')) {
+                    console.log('[OOC 元评论] 菜单项已存在');
+                    return;
+                }
+
+                // 创建菜单项
+                const menuItem = document.createElement('div');
+                menuItem.id = 'ooc-config-menu-item';
+                menuItem.className = 'list-group-item flex-container flexGap5 interactable';
+                menuItem.title = '打开 OOC 元评论配置';
+                menuItem.innerHTML = `
+                    <div class="fa-fw fa-solid fa-gear extensionsMenuExtensionButton"></div>
+                    <span>OOC配置</span>
+                `;
+
+                // 点击事件
+                menuItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 关闭扩展菜单
+                    const menuBtn = document.getElementById('extensionsMenuButton');
+                    if (menuBtn) {
+                        menuBtn.click();
+                    }
+                    // 延迟打开配置窗口
+                    setTimeout(() => openConfigDialog(), 200);
+                });
+
+                // 添加到菜单
+                extensionsMenu.appendChild(menuItem);
+                console.log('[OOC 元评论] 菜单项已添加到扩展菜单');
+            }
+        }, 500);
+
+        // 10秒后停止检查
+        setTimeout(() => clearInterval(checkMenu), 10000);
+    } catch (e) {
+        console.error('[OOC 元评论] 添加菜单项失败:', e);
     }
 }
 
@@ -268,24 +321,21 @@ const config = getConfig();
 console.log('[OOC 元评论] 脚本已加载');
 console.log('[OOC 元评论] 当前配置:', config.model, '@', config.apiUrl);
 
-// 注册全局配置函数到所有可访问的窗口
+// 注册全局配置函数
 try {
-    // 尝试注册到顶层窗口
     const topWindow = window.parent || window.top || window;
     topWindow.__ooc_openConfig = openConfigDialog;
-    // 也注册到当前窗口（备用）
     window.__ooc_openConfig = openConfigDialog;
-    console.log('[OOC 元评论] 配置函数已注册');
 } catch (e) {
-    // 如果无法访问顶层窗口，只注册到当前窗口
     window.__ooc_openConfig = openConfigDialog;
-    console.log('[OOC 元评论] 配置函数已注册（本地窗口）');
 }
+
+// 添加扩展菜单项
+addMenuItem();
 
 if (!config.apiKey) {
     console.warn('[OOC 元评论] ⚠️ API Key 未配置');
-    // 延迟显示提示，确保页面加载完成
     setTimeout(() => {
-        toastr.info('<a href="#" style="color: #fff; text-decoration: underline;" onclick="window.__ooc_openConfig?.(); return false;">点击此处配置 API Key</a>', 'OOC 元评论 - 首次使用需配置', { timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false });
+        toastr.info('请点击输入框左侧的扩展菜单，选择"OOC配置"来设置 API Key', 'OOC 元评论 - 首次使用需配置', { timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false });
     }, 2000);
 }
