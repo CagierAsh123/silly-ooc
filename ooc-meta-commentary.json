@@ -1,0 +1,13 @@
+{
+  "type": "script",
+  "enabled": false,
+  "name": "OOC 元评论生成器",
+  "id": "ooc-meta-commentary-001",
+  "content": "import 'https://cdn.jsdelivr.net/gh/CagierAsh123/silly-ooc@main/ooc-meta-commentary.js'",
+  "info": "检测用户消息中的 <ooc> 标签，调用 OpenAI 兼容 API 生成元评论，自动追加到 AI 回复末尾。\n\n## 使用方法\n1. 修改脚本中的 CONFIG 配置区，设置你的 apiUrl、apiKey 和 model\n2. 启用脚本\n3. 在消息中使用 <ooc>你的评论</ooc> 标签\n\n## 配置示例\n- OpenAI: apiUrl='https://api.openai.com/v1/chat/completions', model='gpt-4o-mini'\n- Gemini (OpenAI兼容): apiUrl='https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model='gemini-2.0-flash-exp'\n- 其他兼容 API: 修改对应的 url 和 model\n\n## 工作流程\n用户发送 <ooc>内容</ooc> → 主 AI 生成剧情回复 → 调用独立 API 生成元评论 → 追加 <details> 折叠框到回复末尾",
+  "button": {
+    "enabled": false,
+    "buttons": []
+  },
+  "data": {}
+}
