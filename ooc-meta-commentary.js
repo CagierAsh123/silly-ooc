@@ -1,45 +1,116 @@
 console.log('=== OOC 脚本开始加载 ===');
 
-// ========== 配置区 ==========
-// 从酒馆助手变量读取配置，如果没有则使用默认值
+// ========== 配置管理 ==========
+const CONFIG_STORAGE_KEY = 'ooc_meta_commentary_config';
+
+// 默认配置
+const DEFAULT_CONFIG = {
+    apiUrl: 'https://api.siliconflow.cn/v1/chat/completions',
+    apiKey: '',
+    model: 'deepseek-ai/DeepSeek-V3',
+    detailsLabel: '📝 OOC 元评论'
+};
+
+// 从 localStorage 读取配置
 function getConfig() {
-    const variables = getVariables({ type: 'script', script_id: getScriptId() }) || {};
-
-    return {
-        apiUrl: variables.apiUrl || 'https://api.siliconflow.cn/v1/chat/completions',
-        apiKey: variables.apiKey || '',
-        model: variables.model || 'deepseek-ai/DeepSeek-V3',
-        detailsLabel: variables.detailsLabel || '📝 OOC 元评论'
-    };
+    try {
+        const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (saved) {
+            return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+        }
+    } catch (e) {
+        console.error('[OOC 元评论] 读取配置失败:', e);
+    }
+    return { ...DEFAULT_CONFIG };
 }
 
-// 获取配置（每次使用时重新读取，支持动态更新）
-function CONFIG() {
-    return getConfig();
+// 保存配置到 localStorage
+function saveConfig(config) {
+    try {
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+        return true;
+    } catch (e) {
+        console.error('[OOC 元评论] 保存配置失败:', e);
+        return false;
+    }
 }
 
-// 初始化默认配置
-function initConfig() {
-    const variables = getVariables({ type: 'script', script_id: getScriptId() }) || {};
-    let needsUpdate = false;
+// 打开配置弹窗
+function openConfigDialog() {
+    const config = getConfig();
 
-    if (!variables.apiUrl) {
-        variables.apiUrl = 'https://api.siliconflow.cn/v1/chat/completions';
-        needsUpdate = true;
-    }
-    if (!variables.model) {
-        variables.model = 'deepseek-ai/DeepSeek-V3';
-        needsUpdate = true;
-    }
-    if (!variables.detailsLabel) {
-        variables.detailsLabel = '📝 OOC 元评论';
-        needsUpdate = true;
-    }
-    // apiKey 不设置默认值，让用户自己配置
+    const html = `
+        <div style="padding: 20px; min-width: 400px;">
+            <h3 style="margin: 0 0 15px 0;">OOC 元评论配置</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">API 地址 *</label>
+                <input id="ooc apiUrl" type="text" value="${config.apiUrl}"
+                    style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">API Key * (必填)</label>
+                <input id="ooc apiKey" type="password" value="${config.apiKey}"
+                    style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">模型名称 *</label>
+                <input id="ooc model" type="text" value="${config.model}"
+                    style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">折叠框标签</label>
+                <input id="ooc detailsLabel" type="text" value="${config.detailsLabel}"
+                    style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="ooc cancelBtn"
+                    style="padding: 8px 16px; background: #555; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+                    取消
+                </button>
+                <button id="ooc saveBtn"
+                    style="padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+                    保存
+                </button>
+            </div>
+        </div>
+    `;
 
-    if (needsUpdate) {
-        insertVariables(variables, { type: 'script', script_id: getScriptId() });
-    }
+    callGenericPopup(html, 'text', '');
+
+    // 等待DOM插入后绑定事件
+    setTimeout(() => {
+        const saveBtn = document.getElementById('ooc saveBtn');
+        const cancelBtn = document.getElementById('ooc cancelBtn');
+
+        if (saveBtn) {
+            saveBtn.onclick = () => {
+                const newConfig = {
+                    apiUrl: document.getElementById('ooc apiUrl')?.value || DEFAULT_CONFIG.apiUrl,
+                    apiKey: document.getElementById('ooc apiKey')?.value || '',
+                    model: document.getElementById('ooc model')?.value || DEFAULT_CONFIG.model,
+                    detailsLabel: document.getElementById('ooc detailsLabel')?.value || DEFAULT_CONFIG.detailsLabel
+                };
+
+                if (!newConfig.apiKey) {
+                    toastr.error('API Key 不能为空！', 'OOC 元评论');
+                    return;
+                }
+
+                if (saveConfig(newConfig)) {
+                    toastr.success('配置已保存！', 'OOC 元评论');
+                    closeGenericPopup();
+                } else {
+                    toastr.error('配置保存失败！', 'OOC 元评论');
+                }
+            };
+        }
+
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                closeGenericPopup();
+            };
+        }
+    }, 100);
 }
 
 // 提示词模板
@@ -73,16 +144,17 @@ function extractOocContent(text) {
 
 // 生成折叠框 HTML
 function generateDetails(content) {
-    return `\n\n<details>\n<summary>${CONFIG().detailsLabel}</summary>\n\n${content}\n\n</details>`;
+    const config = getConfig();
+    return `\n\n<details>\n<summary>${config.detailsLabel}</summary>\n\n${content}\n\n</details>`;
 }
 
 // 调用 API
 async function callApi(prompt) {
-    const config = CONFIG();
+    const config = getConfig();
 
     if (!config.apiKey) {
         console.error('[OOC 元评论] API Key 未配置！');
-        toastr.warning('请先在酒馆助手脚本设置中配置 API Key', 'OOC 元评论');
+        toastr.warning('点击下方按钮配置 API Key', 'OOC 元评论 - 需要配置', { timeOut: 5000, onclick: openConfigDialog });
         return null;
     }
 
@@ -108,6 +180,7 @@ async function callApi(prompt) {
         return data.choices?.[0]?.message?.content || '';
     } catch (error) {
         console.error('[OOC 元评论] API 调用失败:', error);
+        toastr.error(error.message || 'API 调用失败，请检查配置', 'OOC 元评论');
         return null;
     }
 }
@@ -190,11 +263,14 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (messageId) => {
 console.log('[OOC 元评论] 事件监听注册完成');
 
 // ========== 初始化 ==========
-initConfig();
-const config = CONFIG();
+const config = getConfig();
 console.log('[OOC 元评论] 脚本已加载');
 console.log('[OOC 元评论] 当前配置:', config.model, '@', config.apiUrl);
+
+// 注册全局配置函数（方便用户调用）
+window.__ooc_openConfig = openConfigDialog;
+
 if (!config.apiKey) {
-    console.warn('[OOC 元评论] ⚠️ 请在酒馆助手脚本设置中配置 API Key');
-    toastr.info('请在脚本设置中配置 API Key 后使用', 'OOC 元评论');
+    console.warn('[OOC 元评论] ⚠️ API Key 未配置');
+    toastr.info('请在浏览器控制台输入 __ooc_openConfig() 配置 API Key', 'OOC 元评论 - 首次使用需配置', { timeOut: 8000 });
 }
