@@ -43,7 +43,7 @@ function openConfigDialog() {
         <div style="padding: 20px; min-width: 400px;">
             <h3 style="margin: 0 0 15px 0;">OOC 元评论配置</h3>
             <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: bold;">API 地址 *</label>
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">API 地址</label>
                 <input id="ooc apiUrl" type="text" value="${config.apiUrl}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
@@ -53,7 +53,7 @@ function openConfigDialog() {
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
             <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: bold;">模型名称 *</label>
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">模型名称</label>
                 <input id="ooc model" type="text" value="${config.model}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
@@ -154,7 +154,8 @@ async function callApi(prompt) {
 
     if (!config.apiKey) {
         console.error('[OOC 元评论] API Key 未配置！');
-        toastr.warning('点击下方按钮配置 API Key', 'OOC 元评论 - 需要配置', { timeOut: 5000, onclick: openConfigDialog });
+        // 尝试多种方式提示配置
+        toastr.warning('<a href="#" style="color: #fff; text-decoration: underline;" onclick="window.__ooc_openConfig?.(); return false;">点击此处配置 API Key</a>', 'OOC 元评论 - 需要配置', { timeOut: 0, extendedTimeOut: 0, closeButton: true });
         return null;
     }
 
@@ -267,18 +268,24 @@ const config = getConfig();
 console.log('[OOC 元评论] 脚本已加载');
 console.log('[OOC 元评论] 当前配置:', config.model, '@', config.apiUrl);
 
-// 注册全局配置函数到顶层窗口（方便用户在控制台调用）
+// 注册全局配置函数到所有可访问的窗口
 try {
+    // 尝试注册到顶层窗口
     const topWindow = window.parent || window.top || window;
     topWindow.__ooc_openConfig = openConfigDialog;
-    console.log('[OOC 元评论] 配置函数已注册，在控制台输入 __ooc_openConfig() 即可配置');
+    // 也注册到当前窗口（备用）
+    window.__ooc_openConfig = openConfigDialog;
+    console.log('[OOC 元评论] 配置函数已注册');
 } catch (e) {
-    // 如果无法访问顶层窗口，注册到当前窗口
+    // 如果无法访问顶层窗口，只注册到当前窗口
     window.__ooc_openConfig = openConfigDialog;
     console.log('[OOC 元评论] 配置函数已注册（本地窗口）');
 }
 
 if (!config.apiKey) {
     console.warn('[OOC 元评论] ⚠️ API Key 未配置');
-    toastr.info('请在浏览器控制台输入 __ooc_openConfig() 配置 API Key', 'OOC 元评论 - 首次使用需配置', { timeOut: 8000 });
+    // 延迟显示提示，确保页面加载完成
+    setTimeout(() => {
+        toastr.info('<a href="#" style="color: #fff; text-decoration: underline;" onclick="window.__ooc_openConfig?.(); return false;">点击此处配置 API Key</a>', 'OOC 元评论 - 首次使用需配置', { timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false });
+    }, 2000);
 }
