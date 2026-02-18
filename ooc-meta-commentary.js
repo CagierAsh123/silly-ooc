@@ -36,7 +36,8 @@ function saveConfig(config) {
 }
 
 // 打开配置弹窗
-function openConfigDialog() {
+async function openConfigDialog() {
+    const { Popup } = SillyTavern.getContext();
     const config = getConfig();
 
     const html = `
@@ -44,30 +45,30 @@ function openConfigDialog() {
             <h3 style="margin: 0 0 15px 0;">OOC 元评论配置</h3>
             <div style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold;">API 地址</label>
-                <input id="ooc apiUrl" type="text" value="${config.apiUrl}"
+                <input id="ooc_apiUrl" type="text" value="${config.apiUrl}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
             <div style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold;">API Key * (必填)</label>
-                <input id="ooc apiKey" type="password" value="${config.apiKey}"
+                <input id="ooc_apiKey" type="password" value="${config.apiKey}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
             <div style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold;">模型名称</label>
-                <input id="ooc model" type="text" value="${config.model}"
+                <input id="ooc_model" type="text" value="${config.model}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
             <div style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold;">折叠框标签</label>
-                <input id="ooc detailsLabel" type="text" value="${config.detailsLabel}"
+                <input id="ooc_detailsLabel" type="text" value="${config.detailsLabel}"
                     style="width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px;">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="ooc cancelBtn"
+                <button id="ooc_cancelBtn"
                     style="padding: 8px 16px; background: #555; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
                     取消
                 </button>
-                <button id="ooc saveBtn"
+                <button id="ooc_saveBtn"
                     style="padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
                     保存
                 </button>
@@ -75,42 +76,61 @@ function openConfigDialog() {
         </div>
     `;
 
-    callGenericPopup(html, 'text', '');
+    // 优先使用新 API，回退到旧 API
+    if (Popup && Popup.show) {
+        await Popup.show.text('OOC 元评论配置', html);
+        bindDialogEvents();
+    } else if (typeof callGenericPopup === 'function') {
+        callGenericPopup(html, 'text', '');
+        bindDialogEvents();
+    } else {
+        console.error('[OOC 元评论] 无法打开弹窗: Popup 和 callGenericPopup 都不可用');
+        toastr.error('无法打开配置窗口', 'OOC 元评论');
+    }
 
-    // 等待DOM插入后绑定事件
-    setTimeout(() => {
-        const saveBtn = document.getElementById('ooc saveBtn');
-        const cancelBtn = document.getElementById('ooc cancelBtn');
+    function bindDialogEvents() {
+        setTimeout(() => {
+            const saveBtn = document.getElementById('ooc_saveBtn');
+            const cancelBtn = document.getElementById('ooc_cancelBtn');
 
-        if (saveBtn) {
-            saveBtn.onclick = () => {
-                const newConfig = {
-                    apiUrl: document.getElementById('ooc apiUrl')?.value || DEFAULT_CONFIG.apiUrl,
-                    apiKey: document.getElementById('ooc apiKey')?.value || '',
-                    model: document.getElementById('ooc model')?.value || DEFAULT_CONFIG.model,
-                    detailsLabel: document.getElementById('ooc detailsLabel')?.value || DEFAULT_CONFIG.detailsLabel
+            if (saveBtn) {
+                saveBtn.onclick = () => {
+                    const newConfig = {
+                        apiUrl: document.getElementById('ooc_apiUrl')?.value || DEFAULT_CONFIG.apiUrl,
+                        apiKey: document.getElementById('ooc_apiKey')?.value || '',
+                        model: document.getElementById('ooc_model')?.value || DEFAULT_CONFIG.model,
+                        detailsLabel: document.getElementById('ooc_detailsLabel')?.value || DEFAULT_CONFIG.detailsLabel
+                    };
+
+                    if (!newConfig.apiKey) {
+                        toastr.error('API Key 不能为空！', 'OOC 元评论');
+                        return;
+                    }
+
+                    if (saveConfig(newConfig)) {
+                        toastr.success('配置已保存！', 'OOC 元评论');
+                        if (Popup && Popup.show) {
+                            // Popup 会自动关闭
+                        } else if (typeof closeGenericPopup === 'function') {
+                            closeGenericPopup();
+                        }
+                    } else {
+                        toastr.error('配置保存失败！', 'OOC 元评论');
+                    }
                 };
+            }
 
-                if (!newConfig.apiKey) {
-                    toastr.error('API Key 不能为空！', 'OOC 元评论');
-                    return;
-                }
-
-                if (saveConfig(newConfig)) {
-                    toastr.success('配置已保存！', 'OOC 元评论');
-                    closeGenericPopup();
-                } else {
-                    toastr.error('配置保存失败！', 'OOC 元评论');
-                }
-            };
-        }
-
-        if (cancelBtn) {
-            cancelBtn.onclick = () => {
-                closeGenericPopup();
-            };
-        }
-    }, 100);
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    if (Popup && Popup.show) {
+                        // Popup 会自动关闭
+                    } else if (typeof closeGenericPopup === 'function') {
+                        closeGenericPopup();
+                    }
+                };
+            }
+        }, 100);
+    }
 }
 
 // 提示词模板
@@ -186,33 +206,58 @@ async function callApi(prompt) {
 }
 
 // ========== 注册斜杠命令 ==========
-try {
-    if (typeof SlashCommandParser !== 'undefined' && typeof SlashCommand !== 'undefined') {
-        SlashCommandParser.addCommandObject(SlashCommand.fromProps({
-            name: 'oocedit',
-            callback: () => {
-                setTimeout(() => openConfigDialog(), 100);
-                return '';
-            },
-            aliases: ['oocedit'],
-            returns: '',
-            namedArgumentList: [],
-            helpString: '打开 OOC 元评论配置'
-        }));
-        console.log('[OOC 元评论] 斜杠命令已注册: /oocedit');
-    } else {
-        console.warn('[OOC 元评论] SlashCommandParser 不可用，尝试旧 API');
-        registerMacroLike(
-            /^\/oocedit$/i,
-            () => {
-                setTimeout(() => openConfigDialog(), 100);
-                return '';
-            }
-        );
-        console.log('[OOC 元评论] 斜杠命令已注册 (旧 API): /oocedit');
+function registerSlashCommand() {
+    try {
+        if (typeof SlashCommandParser !== 'undefined' && typeof SlashCommand !== 'undefined') {
+            SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+                name: 'oocedit',
+                callback: () => {
+                    setTimeout(() => openConfigDialog(), 100);
+                    return '';
+                },
+                aliases: ['oocedit'],
+                returns: '',
+                namedArgumentList: [],
+                helpString: '打开 OOC 元评论配置'
+            }));
+            console.log('[OOC 元评论] 斜杠命令已注册: /oocedit');
+        } else if (typeof registerMacroLike === 'function') {
+            registerMacroLike(
+                /^\/oocedit$/i,
+                () => {
+                    setTimeout(() => openConfigDialog(), 100);
+                    return '';
+                }
+            );
+            console.log('[OOC 元评论] 斜杠命令已注册 (旧 API): /oocedit');
+        } else {
+            console.warn('[OOC 元评论] 无法注册斜杠命令: 所有 API 都不可用');
+        }
+    } catch (e) {
+        console.error('[OOC 元评论] 注册斜杠命令失败:', e);
     }
-} catch (e) {
-    console.error('[OOC 元评论] 注册斜杠命令失败:', e);
+}
+
+// 尝试立即注册，如果失败则在 APP_READY 后重试
+function tryRegisterCommand() {
+    try {
+        registerSlashCommand();
+    } catch (e) {
+        // 延迟重试
+        setTimeout(registerSlashCommand, 1000);
+    }
+}
+
+// 如果 SillyTavern 已就绪，立即注册；否则等待 APP_READY 事件
+if (typeof SillyTavern !== 'undefined') {
+    const { eventSource, event_types } = SillyTavern.getContext();
+    if (eventSource && event_types) {
+        eventSource.once(event_types.APP_READY, tryRegisterCommand);
+    } else {
+        setTimeout(tryRegisterCommand, 1000);
+    }
+} else {
+    setTimeout(tryRegisterCommand, 1000);
 }
 
 // ========== 事件处理 ==========
