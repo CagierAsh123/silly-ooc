@@ -187,14 +187,30 @@ async function callApi(prompt) {
 
 // ========== 注册斜杠命令 ==========
 try {
-    registerMacroLike(
-        /^\/oocedit$/i,
-        () => {
-            setTimeout(() => openConfigDialog(), 100);
-            return ''; // 清除命令
-        }
-    );
-    console.log('[OOC 元评论] 斜杠命令已注册: /oocedit');
+    if (typeof SlashCommandParser !== 'undefined' && typeof SlashCommand !== 'undefined') {
+        SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+            name: 'oocedit',
+            callback: () => {
+                setTimeout(() => openConfigDialog(), 100);
+                return '';
+            },
+            aliases: ['oocedit'],
+            returns: '',
+            namedArgumentList: [],
+            helpString: '打开 OOC 元评论配置'
+        }));
+        console.log('[OOC 元评论] 斜杠命令已注册: /oocedit');
+    } else {
+        console.warn('[OOC 元评论] SlashCommandParser 不可用，尝试旧 API');
+        registerMacroLike(
+            /^\/oocedit$/i,
+            () => {
+                setTimeout(() => openConfigDialog(), 100);
+                return '';
+            }
+        );
+        console.log('[OOC 元评论] 斜杠命令已注册 (旧 API): /oocedit');
+    }
 } catch (e) {
     console.error('[OOC 元评论] 注册斜杠命令失败:', e);
 }
